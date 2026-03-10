@@ -1,7 +1,7 @@
 /**
  * @file uart_loopback_config.h
  * @brief UART回环测试配置文件
- * @details 定义测试模式开关、参数和Debug选项
+ * @details 定义硬件回环开关、参数和Debug选项
  *
  * @copyright Copyright (c) 2025
  * @date 2025-03-10
@@ -23,26 +23,24 @@ extern "C"
 
     /**
      * @brief 测试功能总开关
-     * @note  1=启用测试, 0=禁用测试(恢复正常发送模式)
+     * @note  推荐直接在本文件配置:
+     *        1=编译并启用回环测试逻辑
+     *        0=关闭回环测试,走正常AGV业务
+     *        仍兼容工程编译宏覆盖
      */
-#define UART_LOOPBACK_TEST_ENABLE 1
+#ifndef UART_LOOPBACK_TEST_ENABLE
+#define UART_LOOPBACK_TEST_ENABLE 0
+#endif
 
     /* ========================================================================
-     * 2. 测试模式选择
+     * 2. 硬件回环开关
      * ======================================================================== */
 
     /**
-     * @brief 测试模式定义
+     * @brief 硬件自收自发开关
+     * @note  1=启用硬件回环测试(TX-RX短接), 0=禁用(走正常AGV业务发送)
      */
-#define UART_LOOPBACK_MODE_HARDWARE 1  /**< 硬件回环: TX-RX物理短接 */
-#define UART_LOOPBACK_MODE_SOFTWARE 2  /**< 软件回环: 内存模拟接收 */
-
-    /**
-     * @brief 当前使用的测试模式
-     * @note  软件回环无需硬件连接,推荐用于初步测试
-     *        硬件回环需要短接PA2(TX)和PA3(RX),用于验证物理层
-     */
-#define UART_LOOPBACK_CURRENT_MODE UART_LOOPBACK_MODE_SOFTWARE
+#define UART_LOOPBACK_HARDWARE_ENABLE 0
 
     /* ========================================================================
      * 3. Debug输出控制
