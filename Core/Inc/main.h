@@ -31,9 +31,6 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#ifdef UART_LOOPBACK_TEST_ENABLE
-  #include "uart_loopback_config.h"
-#endif
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

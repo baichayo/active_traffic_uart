@@ -13,7 +13,6 @@
 #include "uart_frame.h"
 #include "usart.h"
 #include "stdio.h"
-#include "string.h"
 
 /* Private defines -----------------------------------------------------------*/
 #define TEST_PASS true
@@ -26,120 +25,13 @@ static void print_frame_header_info(const uint8_t* frame_buf);
 /* Public functions ----------------------------------------------------------*/
 
 /**
- * @brief 执行UART回环测试(根据配置选择模式)
+ * @brief 执行UART硬件回环测试
  */
 bool uart_loopback_test_execute(void)
 {
-#if UART_LOOPBACK_CURRENT_MODE == UART_LOOPBACK_MODE_HARDWARE
     printf("\r\n========== UART Loopback Test Start ==========\r\n");
     printf("Mode: Hardware Loopback (TX-RX Shorted)\r\n");
     return uart_loopback_test_hardware();
-
-#elif UART_LOOPBACK_CURRENT_MODE == UART_LOOPBACK_MODE_SOFTWARE
-    printf("\r\n========== UART Loopback Test Start ==========\r\n");
-    printf("Mode: Software Loopback (Memory Simulation)\r\n");
-    return uart_loopback_test_software();
-
-#else
-#error "Invalid UART_LOOPBACK_CURRENT_MODE"
-#endif
-}
-
-/**
- * @brief 软件回环测试(内存模拟接收)
- */
-bool uart_loopback_test_software(void)
-{
-    ctrl_frame_t test_data = {0};
-    uint8_t tx_buf[UART_LOOPBACK_RX_BUF_SIZE];
-    uint16_t frame_len = 0;
-    int32_t rc;
-
-    /* ===== 步骤1: 构造测试数据 ===== */
-    uart_loopback_build_test_data(&test_data);
-
-#if UART_LOOPBACK_DEBUG_ENABLE
-    printf("\r\n[TEST] Building test data...\r\n");
-    printf("[TEST] Test data structure:\r\n");
-    uart_loopback_print_ctrl_frame(&test_data);
-#endif
-
-    /* ===== 步骤2: 打包数据 ===== */
-    rc = uart_frame_pack(
-        UART_FRAME_TYPE_CONTROL_CMD,
-        &test_data,
-        sizeof(ctrl_frame_t),
-        tx_buf,
-        sizeof(tx_buf),
-        &frame_len
-    );
-
-    if (rc != UART_FRAME_OK)
-    {
-        printf("[ERROR] Pack failed: %ld\r\n", (long)rc);
-        print_test_result(TEST_FAIL, "Pack Function");
-        return TEST_FAIL;
-    }
-
-#if UART_LOOPBACK_DEBUG_ENABLE
-    printf("\r\n[SEND] Frame Length: %u bytes\r\n", frame_len);
-    print_frame_header_info(tx_buf);
-
-#if UART_LOOPBACK_HEX_DUMP_ENABLE
-    printf("[SEND] Hex Dump:\r\n");
-    uart_loopback_hex_dump(tx_buf, frame_len, "[SEND]");
-#endif
-#endif
-
-    /* ===== 步骤3: 直接解析发送缓冲区(软件回环) ===== */
-    uart_frame_parse_result_t parse_result;
-    rc = uart_frame_parse(tx_buf, frame_len, &parse_result);
-
-    if (rc != UART_FRAME_OK)
-    {
-        printf("[ERROR] Parse failed: %ld\r\n", (long)rc);
-        print_test_result(TEST_FAIL, "Parse Function");
-        return TEST_FAIL;
-    }
-
-#if UART_LOOPBACK_DEBUG_ENABLE
-    printf("\r\n[PARSE] Frame Length: %u bytes\r\n", (unsigned)frame_len);
-    uart_loopback_print_validation(&parse_result, tx_buf, frame_len);
-#endif
-
-    /* ===== 步骤4: 验证数据一致性 ===== */
-    if (parse_result.type != UART_FRAME_TYPE_CONTROL_CMD)
-    {
-        printf("[ERROR] Type mismatch: expected 0x11, got 0x%02X\r\n", parse_result.type);
-        print_test_result(TEST_FAIL, "Type ID Check");
-        return TEST_FAIL;
-    }
-
-    if (parse_result.data_len != sizeof(ctrl_frame_t))
-    {
-        printf("[ERROR] Data length mismatch: expected %u, got %u\r\n",
-               (unsigned)sizeof(ctrl_frame_t), parse_result.data_len);
-        print_test_result(TEST_FAIL, "Data Length Check");
-        return TEST_FAIL;
-    }
-
-    /* ===== 步骤5: 逐字节比较 ===== */
-    ctrl_frame_t* received_data = (ctrl_frame_t*)parse_result.data_ptr;
-    bool bytes_match = uart_loopback_compare_bytes(
-        (const uint8_t*)&test_data,
-        (const uint8_t*)received_data,
-        sizeof(ctrl_frame_t)
-    );
-
-    if (!bytes_match)
-    {
-        print_test_result(TEST_FAIL, "Byte Comparison");
-        return TEST_FAIL;
-    }
-
-    /* ===== 测试通过 ===== */
-    print_test_result(TEST_PASS, "All Checks");
-    return TEST_PASS;
 }
 
 /**
@@ -332,7 +224,6 @@ bool uart_loopback_compare_bytes(const uint8_t* expected,
 #if UART_LOOPBACK_DEBUG_ENABLE
     size_t total_passed = 0;
     size_t chunk_size = 16;
-    bool all_match = true;
 #endif
 
     for (size_t i = 0; i < len; i++)
@@ -342,7 +233,6 @@ bool uart_loopback_compare_bytes(const uint8_t* expected,
 #if UART_LOOPBACK_DEBUG_ENABLE
             printf("[COMPARE] Mismatch at offset %u: expected 0x%02X, got 0x%02X\r\n",
                    (unsigned)i, expected[i], actual[i]);
-            all_match = false;
 #endif
             return TEST_FAIL;
         }

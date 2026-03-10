@@ -23,8 +23,9 @@
 #include "stdio.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "uart_loopback_config.h"
 #include "uart_frame.h"
-#ifdef UART_LOOPBACK_TEST_ENABLE
+#if UART_LOOPBACK_TEST_ENABLE
   #include "uart_loopback_test.h"
 #endif
 /* USER CODE END Includes */
@@ -107,8 +108,9 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-#ifdef UART_LOOPBACK_TEST_ENABLE
-      // 测试模式：执行UART回环测试
+#if UART_LOOPBACK_TEST_ENABLE
+  #if (UART_LOOPBACK_HARDWARE_ENABLE == 1)
+      // 硬件回环模式：执行UART自收自发测试
       if(uart_loopback_test_execute()) {
         // 测试通过 - 绿灯闪烁3次
         for(int i = 0; i < 3; i++) {
@@ -124,8 +126,13 @@ int main(void)
         led_off(led_r);
       }
       HAL_Delay(UART_LOOPBACK_TEST_INTERVAL_MS);
+  #else
+      // 硬件回环开关关闭：走正常AGV控制发送逻辑
+      Send_Control_Command();
+      HAL_Delay(2000);  // 2 秒延时，0.5Hz 发送频率
+  #endif
 #else
-      // 正常模式：发送控制命令
+      // 未启用回环测试编译：走正常AGV控制发送逻辑
       Send_Control_Command();
       HAL_Delay(2000);  // 2 秒延时，0.5Hz 发送频率
 #endif
